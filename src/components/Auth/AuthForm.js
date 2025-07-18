@@ -1,56 +1,105 @@
-import { useState } from 'react';
-import classes from './AuthForm.module.css';
+import { useRef, useState } from "react";
+import classes from "./AuthForm.module.css";
 
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(null);
+  const [error, setError] = useState(null);
+
+  const emailInputRef = useRef();
+  const passwordInputRef = useRef();
 
   const switchAuthModeHandler = () => {
     setIsLogin((prevState) => !prevState);
-    setErrorMsg(null); 
   };
 
-  const handleSignUp = (e) => {
-    e.preventDefault();
-
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const enteredEmail = emailInputRef.current.value;
+    const enteredPassword = passwordInputRef.current.value;
 
     setIsLoading(true);
-    setErrorMsg(null);
+    setError(null); // clear previous errors
 
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Sign up failed. Please check your input and try again.');
-    }, 2000);
+    let url;
+    if (isLogin) {
+      url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCcdnEG8GsxuNaeSVGU1kjK66bkn5OB03k`;
+    } else {
+      url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyCcdnEG8GsxuNaeSVGU1kjK66bkn5OB03k`;
+    }
+
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: enteredEmail,
+        password: enteredPassword,
+        returnSecureToken: true,
+      }),
+    })
+      .then((res) => {
+        setIsLoading(false);
+        if (res.ok) {
+
+          return res.json();
+        } else {
+          return res.json().then((data) => {
+            const errorMessage =
+              data.error?.message || "Authentication failed!";
+              console.log(data.error.message);
+            alert("Authentication failed!");
+            throw new Error(errorMessage);
+          });
+        }
+      })
+      .then((data) => {
+        console.log("Success:", data);
+        console.log("Success:", data);
+        const token = data.idToken;
+        localStorage.setItem("token", token);
+        alert("Authentication successful!");
+      })
+      .catch((err) => {
+       console.log(setError(err.message));
+      });
   };
 
   return (
     <section className={classes.auth}>
-      <h1>{isLogin ? 'Login' : 'Sign Up'}</h1>
-      <form onSubmit={handleSignUp}>
+      <h1>{isLogin ? "Login" : "Sign Up"}</h1>
+      <form onSubmit={handleSubmit}>
         <div className={classes.control}>
-          <label htmlFor='email'>Your Email</label>
-          <input type='email' id='email' required />
+          <label htmlFor="email">Your Email</label>
+          <input type="email" id="email" required ref={emailInputRef} />
         </div>
         <div className={classes.control}>
-          <label htmlFor='password'>Your Password</label>
-          <input type='password' id='password' required />
+          <label htmlFor="password">Your Password</label>
+          <input
+            type="password"
+            id="password"
+            required
+            ref={passwordInputRef}
+          />
         </div>
-        <div className={classes.actions}>
-        <button type='submit' disabled={isLoading}>
-          {isLoading ? 'Loading...' : isLogin ? 'Login' : 'Create Account'}
-        </button>
-</div>
 
         <div className={classes.actions}>
+          {!isLoading && (
+            <button disabled={isLoading}>
+              {isLogin ? "Login" : "Create Account"}
+            </button>
+          )}
+          {isLoading && <p>Loading...</p>}
           <button
-            type='button'
+            type="button"
             className={classes.toggle}
             onClick={switchAuthModeHandler}
           >
-            {isLogin ? 'Create new account' : 'Login with existing account'}
+            {isLogin ? "Create new account" : "Login with existing account"}
           </button>
         </div>
+        {error && <p className={classes.error}>{error}</p>}
       </form>
     </section>
   );
