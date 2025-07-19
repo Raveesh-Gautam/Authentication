@@ -59,10 +59,7 @@ const AuthForm = () => {
       })
       .then((data) => {
         console.log("Success:", data);
-        console.log("Success:", data);
-        const token = data.idToken;
         authCtx.login(data.idToken);
-        localStorage.setItem("token", token);
         history.replace('/');
         alert("Authentication successful!");
       })
